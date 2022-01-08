@@ -1,0 +1,3 @@
+BenchmarkKustomizationGenerator-8           1000          19573560 ns/op        11237382 B/op      90454 allocs/op
+BenchmarkKustomizationGenerator-8           1000          19637016 ns/op        11245801 B/op     90454 allocs/op
+BenchmarkKustomizationGenerator-8           1000          19789540 ns/op        11245425 B/op      90454 allocs/op

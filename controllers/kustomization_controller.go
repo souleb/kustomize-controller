@@ -338,7 +338,7 @@ func (r *KustomizationReconciler) reconcile(
 	}
 
 	// generate kustomization.yaml if needed
-	err = r.generate(kustomization, dirPath)
+	_, err = r.generate(kustomization, dirPath)
 	if err != nil {
 		return kustomizev1.KustomizationNotReady(
 			kustomization,
@@ -596,8 +596,12 @@ func (r *KustomizationReconciler) getSource(ctx context.Context, kustomization k
 	return source, nil
 }
 
-func (r *KustomizationReconciler) generate(kustomization kustomizev1.Kustomization, dirPath string) error {
-	gen := NewGenerator(kustomization)
+func (r *KustomizationReconciler) generate(kustomization kustomizev1.Kustomization, dirPath string) (action, error) {
+	obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&kustomization)
+	if err != nil {
+		return unchangedAction, fmt.Errorf("failed to convert kustomization to unstructured: %w", err)
+	}
+	gen := NewGenerator(unstructured.Unstructured{Object: obj})
 	return gen.WriteFile(dirPath)
 }
 
@@ -620,7 +624,7 @@ func (r *KustomizationReconciler) build(ctx context.Context, kustomization kusto
 			return nil, fmt.Errorf("error decrypting .env file: %w", err)
 		}
 	}
-	m, err := buildKustomization(fs, dirPath)
+	m, err := BuildKustomization(fs, dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("kustomize build failed: %w", err)
 	}
