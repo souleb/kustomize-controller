@@ -30,14 +30,19 @@ COPY internal/ internal/
 ENV CGO_ENABLED=0
 RUN xx-go build -trimpath -a -o kustomize-controller main.go
 
-FROM alpine:3.18
+FROM registry.access.redhat.com/ubi9/ubi
 
 ARG TARGETPLATFORM
 
-RUN apk --no-cache add ca-certificates tini git openssh-client gnupg \
-  && update-ca-certificates
+RUN yum install -y ca-certificates
+
+# Add Tini
+ENV TINI_VERSION=v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /sbin/tini
+RUN chmod +x /sbin/tini
 
 COPY --from=builder /workspace/kustomize-controller /usr/local/bin/
+COPY LICENSE /licenses/LICENSE
 
 USER 65534:65534
 
