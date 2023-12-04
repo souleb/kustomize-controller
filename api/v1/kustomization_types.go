@@ -99,6 +99,11 @@ type KustomizationSpec struct {
 	// +optional
 	HealthChecks []meta.NamespacedObjectKindReference `json:"healthChecks,omitempty"`
 
+	// A list of custom health checks expressed as CEL expressions.
+	// The CEL expression must evaluate to a boolean value.
+	// +optional
+	CustomHealthChecksExprs []CustomHealthCheckExprs `json:"customHealthChecksExprs,omitempty"`
+
 	// Strategic merge and JSON patches, defined as inline YAML objects,
 	// capable of targeting objects based on kind, label and annotation selectors.
 	// +optional
@@ -153,6 +158,30 @@ type KustomizationSpec struct {
 	// Components specifies relative paths to specifications of other Components.
 	// +optional
 	Components []string `json:"components,omitempty"`
+}
+
+// CustomHealthCheckExprs defines the CEL expressions for custom health checks.
+// The CEL expression must evaluate to a boolean value. The expressions are used
+// to determine the status of the custom resource.
+type CustomHealthCheckExprs struct {
+	// apiVersion of the custom health check.
+	// +required
+	APIVersion string `json:"apiVersion"`
+	// Kind of the custom health check.
+	// +required
+	Kind string `json:"kind"`
+	// InProgressCondition is the expression that verifies that the status
+	// of the custom resource is in progress.
+	// +optional
+	InProgressCondition string `json:"inProgressCondition"`
+	// SuccessCondition is the expression that verifies that the status
+	// of the custom resource is
+	// +optional
+	SuccessCondition string `json:"successCondition"`
+	// FailureCondition is the condition type that indicates that the custom
+	// health check has failed.
+	// +optional
+	FailureCondition string `json:"failureCondition"`
 }
 
 // CommonMetadata defines the common labels and annotations.

@@ -69,6 +69,38 @@ spec:
                 items:
                   type: string
                 type: array
+              customHealthChecksExprs:
+                description: A list of custom health checks expressed as CEL expressions.
+                  The CEL expression must evaluate to a boolean value.
+                items:
+                  description: CustomHealthCheckExprs defines the CEL expressions
+                    for custom health checks. The CEL expression must evaluate to
+                    a boolean value. The expressions are used to determine the status
+                    of the custom resource.
+                  properties:
+                    apiVersion:
+                      description: apiVersion of the custom health check.
+                      type: string
+                    failureCondition:
+                      description: FailureCondition is the condition type that indicates
+                        that the custom health check has failed.
+                      type: string
+                    inProgressCondition:
+                      description: InProgressCondition is the expression that verifies
+                        that the status of the custom resource is in progress.
+                      type: string
+                    kind:
+                      description: Kind of the custom health check.
+                      type: string
+                    successCondition:
+                      description: SuccessCondition is the expression that verifies
+                        that the status of the custom resource is
+                      type: string
+                  required:
+                  - apiVersion
+                  - kind
+                  type: object
+                type: array
               decryption:
                 description: Decrypt Kubernetes secrets before applying them on the
                   cluster.

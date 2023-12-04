@@ -20,29 +20,28 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fluxcd/cli-utils/pkg/kstatus/polling/engine"
+	"github.com/fluxcd/cli-utils/pkg/kstatus/polling/event"
+	kstatusreaders "github.com/fluxcd/cli-utils/pkg/kstatus/polling/statusreaders"
+	"github.com/fluxcd/cli-utils/pkg/kstatus/status"
+	"github.com/fluxcd/cli-utils/pkg/object"
 	"github.com/fluxcd/kustomize-controller/internal/cel"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/engine"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
-	kstatusreaders "sigs.k8s.io/cli-utils/pkg/kstatus/polling/statusreaders"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
-	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
 type customGenericStatusReader struct {
 	genericStatusReader engine.StatusReader
 	gvk                 schema.GroupVersionKind
-	successCondition    string
-	failureCondition    string
 }
 
 func NewCustomGenericStatusReader(mapper meta.RESTMapper, gvk schema.GroupVersionKind, exprs map[string]string) engine.StatusReader {
 	genericStatusReader := kstatusreaders.NewGenericStatusReader(mapper, genericConditions(gvk.Kind, exprs))
-	return &customJobStatusReader{
+	return &customGenericStatusReader{
 		genericStatusReader: genericStatusReader,
+		gvk:                 gvk,
 	}
 }
 
@@ -70,16 +69,14 @@ func genericConditions(kind string, exprs map[string]string) func(u *unstructure
 		obj := u.UnstructuredContent()
 
 		// exprs are evaluated in order, so we can return the first match.
-		// This enables us to have multiple conditions in the CR and have them evaluated in order of priority.
-		for st, expr := range exprs {
-			result, err := cel.ProcessExpr(expr, obj)
+		for statusKey, expr := range exprs {
+			eval, err := cel.Eval(expr, obj)
 			if err != nil {
 				return nil, err
 			}
-			switch st {
+			switch statusKey {
 			case status.CurrentStatus.String():
-				if result {
-					// TODO: Get message from the CR
+				if eval.Result {
 					message := fmt.Sprintf("%s Succeeded", kind)
 					return &status.Result{
 						Status:     status.CurrentStatus,
@@ -88,7 +85,7 @@ func genericConditions(kind string, exprs map[string]string) func(u *unstructure
 					}, nil
 				}
 			case status.FailedStatus.String():
-				if result {
+				if eval.Result {
 					message := fmt.Sprintf("%s Failed", kind)
 					return &status.Result{
 						Status:  status.FailedStatus,
@@ -104,7 +101,7 @@ func genericConditions(kind string, exprs map[string]string) func(u *unstructure
 					}, nil
 				}
 			case status.InProgressStatus.String():
-				if result {
+				if eval.Result {
 					message := fmt.Sprintf("%s in progress", kind)
 					return &status.Result{
 						Status:  status.InProgressStatus,

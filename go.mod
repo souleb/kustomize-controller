@@ -30,7 +30,7 @@ require (
 	github.com/fluxcd/pkg/testserver v0.5.0
 	github.com/fluxcd/source-controller/api v1.1.2
 	github.com/getsops/sops/v3 v3.8.1
-	github.com/google/cel-go v0.16.1
+	github.com/google/cel-go v0.18.2
 	github.com/hashicorp/vault/api v1.10.0
 	github.com/onsi/gomega v1.30.0
 	github.com/opencontainers/go-digest v1.0.0
@@ -72,7 +72,7 @@ require (
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230923063757-afb1ddc0824c // indirect
 	github.com/acomagu/bufpipe v1.0.4 // indirect
-	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.21.1 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.18.44 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.12 // indirect
@@ -189,7 +189,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/crypto v0.15.0 // indirect
-	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
+	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/oauth2 v0.14.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect

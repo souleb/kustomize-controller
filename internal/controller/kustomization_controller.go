@@ -33,9 +33,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	kuberecorder "k8s.io/client-go/tools/record"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,6 +69,7 @@ import (
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1"
 	"github.com/fluxcd/kustomize-controller/internal/decryptor"
 	"github.com/fluxcd/kustomize-controller/internal/inventory"
+	"github.com/fluxcd/kustomize-controller/internal/statusreaders"
 )
 
 // +kubebuilder:rbac:groups=kustomize.toolkit.fluxcd.io,resources=kustomizations,verbs=get;list;watch;create;update;patch;delete
@@ -349,6 +352,9 @@ func (r *KustomizationReconciler) reconcile(
 		return fmt.Errorf("failed to update status: %w", err)
 	}
 
+	// check if we have custom health checks expressions defined
+	r.customHealthChecksExprsMutatePollingOpts(obj)
+
 	// Configure the Kubernetes client for impersonation.
 	impersonation := runtimeClient.NewImpersonator(
 		r.Client,
@@ -464,6 +470,23 @@ func (r *KustomizationReconciler) reconcile(
 		fmt.Sprintf("Applied revision: %s", revision))
 
 	return nil
+}
+
+func (r *KustomizationReconciler) customHealthChecksExprsMutatePollingOpts(obj *kustomizev1.Kustomization) {
+	if obj.Spec.CustomHealthChecksExprs != nil {
+		for _, c := range obj.Spec.CustomHealthChecksExprs {
+			exprs := make(map[string]string)
+			exprs[status.CurrentStatus.String()] = c.SuccessCondition
+			exprs[status.FailedStatus.String()] = c.FailureCondition
+			exprs[status.InProgressStatus.String()] = c.InProgressCondition
+			statusReader := statusreaders.NewCustomGenericStatusReader(r.Client.RESTMapper(), schema.FromAPIVersionAndKind(c.APIVersion, c.Kind), exprs)
+			r.PollingOpts.CustomStatusReaders = append(r.PollingOpts.CustomStatusReaders, statusReader)
+		}
+
+		// TODO: remove this once we have exposed the StatusReaders in the StatusPoller in
+		// "github.com/fluxcd/cli-utils/pkg/kstatus/status"
+		r.StatusPoller = polling.NewStatusPoller(r.Client, r.Client.RESTMapper(), r.PollingOpts)
+	}
 }
 
 func (r *KustomizationReconciler) checkDependencies(ctx context.Context,
