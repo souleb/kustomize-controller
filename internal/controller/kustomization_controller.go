@@ -476,10 +476,10 @@ func (r *KustomizationReconciler) customHealthChecksExprsMutatePollingOpts(obj *
 	if obj.Spec.CustomHealthChecksExprs != nil {
 		for _, c := range obj.Spec.CustomHealthChecksExprs {
 			exprs := make(map[string]string)
-			exprs[status.CurrentStatus.String()] = c.SuccessCondition
-			exprs[status.FailedStatus.String()] = c.FailureCondition
-			exprs[status.InProgressStatus.String()] = c.InProgressCondition
-			statusReader := statusreaders.NewCustomGenericStatusReader(r.Client.RESTMapper(), schema.FromAPIVersionAndKind(c.APIVersion, c.Kind), exprs)
+			exprs[status.CurrentStatus.String()] = c.Current
+			exprs[status.FailedStatus.String()] = c.Failed
+			exprs[status.InProgressStatus.String()] = c.InProgress
+			statusReader := statusreaders.NewGenericStatusReader(r.Client.RESTMapper(), schema.FromAPIVersionAndKind(c.APIVersion, c.Kind), exprs)
 			r.PollingOpts.CustomStatusReaders = append(r.PollingOpts.CustomStatusReaders, statusReader)
 		}
 

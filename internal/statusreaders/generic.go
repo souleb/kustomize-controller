@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Flux authors
+Copyright 2023 The Flux authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,28 +32,28 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type customGenericStatusReader struct {
+type genericStatusReader struct {
 	genericStatusReader engine.StatusReader
 	gvk                 schema.GroupVersionKind
 }
 
-func NewCustomGenericStatusReader(mapper meta.RESTMapper, gvk schema.GroupVersionKind, exprs map[string]string) engine.StatusReader {
-	genericStatusReader := kstatusreaders.NewGenericStatusReader(mapper, genericConditions(gvk.Kind, exprs))
-	return &customGenericStatusReader{
-		genericStatusReader: genericStatusReader,
+func NewGenericStatusReader(mapper meta.RESTMapper, gvk schema.GroupVersionKind, exprs map[string]string) engine.StatusReader {
+	statusReader := kstatusreaders.NewGenericStatusReader(mapper, genericConditions(gvk.Kind, exprs))
+	return &genericStatusReader{
+		genericStatusReader: statusReader,
 		gvk:                 gvk,
 	}
 }
 
-func (g *customGenericStatusReader) Supports(gk schema.GroupKind) bool {
+func (g *genericStatusReader) Supports(gk schema.GroupKind) bool {
 	return gk == g.gvk.GroupKind()
 }
 
-func (g *customGenericStatusReader) ReadStatus(ctx context.Context, reader engine.ClusterReader, resource object.ObjMetadata) (*event.ResourceStatus, error) {
+func (g *genericStatusReader) ReadStatus(ctx context.Context, reader engine.ClusterReader, resource object.ObjMetadata) (*event.ResourceStatus, error) {
 	return g.genericStatusReader.ReadStatus(ctx, reader, resource)
 }
 
-func (g *customGenericStatusReader) ReadStatusForObject(ctx context.Context, reader engine.ClusterReader, resource *unstructured.Unstructured) (*event.ResourceStatus, error) {
+func (g *genericStatusReader) ReadStatusForObject(ctx context.Context, reader engine.ClusterReader, resource *unstructured.Unstructured) (*event.ResourceStatus, error) {
 	return g.genericStatusReader.ReadStatusForObject(ctx, reader, resource)
 }
 
@@ -61,14 +61,44 @@ func (g *customGenericStatusReader) ReadStatusForObject(ctx context.Context, rea
 // customHealthChecks:
 //   - apiVersion: "cert-manager.io/v1"
 //     kind: "Certificate"
-//     inProgress: "self.status.conditions.filter(e, e.type == 'Issuing').all(e, e.observedGeneration == self.metadata.generation && e.status == 'True')" # Match issuing condition.
-//     failed: "self.status.conditions.filter(e, e.type == 'Ready').all(e, e.observedGeneration == self.metadata.generation && e.status == 'False')" # Match ready condition.
-//     current: "self.status.conditions.filter(e, e.type == 'Ready').all(e, e.observedGeneration == self.metadata.generation && e.status == 'True')" # Match ready condition.
+//     inProgress: "status.conditions.filter(e, e.type == 'Issuing').all(e, e.observedGeneration == metadata.generation && e.status == 'True')" # Match issuing condition.
+//     failed: "status.conditions.filter(e, e.type == 'Ready').all(e, e.observedGeneration == metadata.generation && e.status == 'False')" # Match ready condition.
+//     current: "status.conditions.filter(e, e.type == 'Ready').all(e, e.observedGeneration == metadata.generation && e.status == 'True')" # Match ready condition.
 func genericConditions(kind string, exprs map[string]string) func(u *unstructured.Unstructured) (*status.Result, error) {
 	return func(u *unstructured.Unstructured) (*status.Result, error) {
 		obj := u.UnstructuredContent()
 
-		// exprs are evaluated in order, so we can return the first match.
+		message := fmt.Sprintf("%s in progress", kind)
+		progressingStatus := &status.Result{
+			Status:  status.InProgressStatus,
+			Message: message,
+			Conditions: []status.Condition{
+				{
+					Type:    status.ConditionReconciling,
+					Status:  corev1.ConditionTrue,
+					Reason:  fmt.Sprintf("%s InProgress", kind),
+					Message: message,
+				},
+			},
+		}
+
+		// If status has observedGeneration != generation, then return Progressing early
+		observedGeneration, ok, err := unstructured.NestedInt64(obj, "status", "observedGeneration")
+		if err != nil {
+			return nil, err
+		}
+
+		if ok {
+			generation, ok, err := unstructured.NestedInt64(obj, "metadata", "generation")
+			if err != nil {
+				return nil, err
+			}
+
+			if ok && observedGeneration != generation {
+				return progressingStatus, nil
+			}
+		}
+
 		for statusKey, expr := range exprs {
 			eval, err := cel.Eval(expr, obj)
 			if err != nil {
@@ -102,35 +132,11 @@ func genericConditions(kind string, exprs map[string]string) func(u *unstructure
 				}
 			case status.InProgressStatus.String():
 				if eval.Result {
-					message := fmt.Sprintf("%s in progress", kind)
-					return &status.Result{
-						Status:  status.InProgressStatus,
-						Message: message,
-						Conditions: []status.Condition{
-							{
-								Type:    status.ConditionReconciling,
-								Status:  corev1.ConditionTrue,
-								Reason:  fmt.Sprintf("%s InProgress", kind),
-								Message: message,
-							},
-						},
-					}, nil
+					return progressingStatus, nil
 				}
 			}
 		}
 
-		message := fmt.Sprintf("%s in progress", kind)
-		return &status.Result{
-			Status:  status.InProgressStatus,
-			Message: message,
-			Conditions: []status.Condition{
-				{
-					Type:    status.ConditionReconciling,
-					Status:  corev1.ConditionTrue,
-					Reason:  fmt.Sprintf("%s InProgress", kind),
-					Message: message,
-				},
-			},
-		}, nil
+		return progressingStatus, nil
 	}
 }

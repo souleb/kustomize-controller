@@ -26,26 +26,11 @@ var envOptions = []cel.EnvOption{
 	k8s.URLs(),
 	k8s.Regex(),
 	k8s.Lists(),
-
-	// 1.27
 	k8s.Authz(),
-
-	// 1.28
 	cel.CrossTypeNumericComparisons(true),
 	cel.OptionalTypes(),
 	k8s.Quantity(),
-
-	// 1.29 (see also validator.ExtendedValidations())
-	cel.ASTValidators(
-		cel.ValidateDurationLiterals(),
-		cel.ValidateTimestampLiterals(),
-		cel.ValidateRegexLiterals(),
-		cel.ValidateHomogeneousAggregateLiterals(),
-	),
-
-	// Strings (from 1.29 onwards)
 	ext.Strings(ext.StringsVersion(2)),
-	// Set library (1.29 onwards)
 	ext.Sets(),
 }
 

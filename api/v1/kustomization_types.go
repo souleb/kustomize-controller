@@ -170,18 +170,18 @@ type CustomHealthCheckExprs struct {
 	// Kind of the custom health check.
 	// +required
 	Kind string `json:"kind"`
-	// InProgressCondition is the expression that verifies that the status
+	// InProgress is the expression that verifies that the status
 	// of the custom resource is in progress.
 	// +optional
-	InProgressCondition string `json:"inProgressCondition"`
-	// SuccessCondition is the expression that verifies that the status
-	// of the custom resource is
-	// +optional
-	SuccessCondition string `json:"successCondition"`
-	// FailureCondition is the condition type that indicates that the custom
+	InProgress string `json:"inProgress"`
+	// Failed is the condition type that indicates that the custom
 	// health check has failed.
 	// +optional
-	FailureCondition string `json:"failureCondition"`
+	Failed string `json:"failed"`
+	// Current is the expression that verifies that the status
+	// of the custom resource is ready.
+	// +optional
+	Current string `json:"current"`
 }
 
 // CommonMetadata defines the common labels and annotations.

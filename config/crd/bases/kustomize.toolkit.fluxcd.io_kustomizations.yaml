@@ -81,20 +81,20 @@ spec:
                     apiVersion:
                       description: apiVersion of the custom health check.
                       type: string
-                    failureCondition:
-                      description: FailureCondition is the condition type that indicates
-                        that the custom health check has failed.
+                    current:
+                      description: Current is the expression that verifies that the
+                        status of the custom resource is ready.
                       type: string
-                    inProgressCondition:
-                      description: InProgressCondition is the expression that verifies
-                        that the status of the custom resource is in progress.
+                    failed:
+                      description: Failed is the condition type that indicates that
+                        the custom health check has failed.
+                      type: string
+                    inProgress:
+                      description: InProgress is the expression that verifies that
+                        the status of the custom resource is in progress.
                       type: string
                     kind:
                       description: Kind of the custom health check.
-                      type: string
-                    successCondition:
-                      description: SuccessCondition is the expression that verifies
-                        that the status of the custom resource is
                       type: string
                   required:
                   - apiVersion
